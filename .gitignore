@@ -1,0 +1,5 @@
+__pycache__/
+*.npy
+*.raw
+.DS_Store
+Thumbs.db

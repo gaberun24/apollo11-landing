@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eagle leszállás 1969</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Elrendezés: teljes képernyős 3D jelenet, fölötte a küldetésirányítás-szerű műszerfal
+   (bal: telemetria + DSKY, jobb: rádióforgalom, lent: idővonal). Szándékosan egyetlen, sötét téma. */
+:root {
+  color-scheme: dark;
+  --void: #050607;
+  --glass: rgba(10, 12, 14, 0.72);
+  --glass-edge: rgba(190, 200, 210, 0.14);
+  --ink: #e9e6df;
+  --ink-dim: #9a9890;
+  --ink-faint: #5f5e59;
+  --dsky: #8dff7a;
+  --amber: #ffb340;
+  --alarm: #ff7a45;
+  --track: #e8c47a;
+  --f-display: 'Barlow Condensed', 'Arial Narrow', 'Roboto Condensed', sans-serif;
+  --f-body: 'Barlow', 'Segoe UI', system-ui, sans-serif;
+  --f-data: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--void); color: var(--ink); font-family: var(--f-body); font-size: 14px; overflow: hidden; -webkit-font-smoothing: antialiased; }
+canvas#scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+canvas#scene:active { cursor: grabbing; }
+.hud { position: fixed; inset: 0; pointer-events: none; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; grid-template-columns: 270px 1fr 340px; grid-template-rows: auto minmax(0, 1fr) auto; gap: 12px; padding-block: calc(env(safe-area-inset-top, 0px) + 14px) calc(env(safe-area-inset-bottom, 0px) + 14px); }
+.hud > * { pointer-events: auto; min-width: 0; }
+.panel { background: var(--glass); border: 1px solid var(--glass-edge); border-radius: 6px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.label { font-family: var(--f-display); font-weight: 600; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-dim); }
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--track); outline-offset: 2px; }
+
+/* fejléc */
+.head { grid-column: 1 / 3; display: flex; gap: 18px; align-items: flex-end; flex-wrap: wrap; pointer-events: none; text-shadow: 0 1px 8px rgba(0,0,0,0.8); }
+.head h1 { margin: 0; font-family: var(--f-display); font-weight: 700; font-size: 30px; letter-spacing: 0.02em; line-height: 0.95; text-wrap: balance; }
+.head h1 small { display: block; font-weight: 500; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim); margin-top: 4px; }
+.clocks { display: flex; gap: 18px; font-variant-numeric: tabular-nums; }
+.clock b { display: block; font-family: var(--f-data); font-weight: 500; font-size: 24px; letter-spacing: 0.02em; }
+.clock span { font-size: 10px; }
+.phase { font-family: var(--f-display); font-size: 15px; font-weight: 600; letter-spacing: 0.06em; color: var(--track); align-self: center; }
+
+.views { grid-column: 3; justify-self: end; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-self: start; }
+.views button, .tbtn { background: var(--glass); border: 1px solid var(--glass-edge); border-radius: 4px; padding: 6px 10px; font-family: var(--f-display); font-weight: 600; font-size: 13px; letter-spacing: 0.06em; cursor: pointer; }
+#sound { border-color: var(--track); color: var(--track); }
+#sound.off { border-color: var(--glass-edge); color: var(--ink-dim); }
+.views button[aria-pressed="true"] { background: var(--ink); color: var(--void); border-color: var(--ink); }
+.views button:hover, .tbtn:hover { border-color: var(--ink-dim); }
+
+/* telemetria */
+.tele { grid-column: 1; grid-row: 2; align-self: start; padding: 12px 14px; display: grid; gap: 10px; max-height: 100%; overflow: auto; }
+.rows { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: baseline; }
+.rows .k { font-family: var(--f-display); font-weight: 500; font-size: 13px; color: var(--ink-dim); letter-spacing: 0.03em; }
+.rows .v { font-family: var(--f-data); font-size: 15px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rows .v i { font-style: normal; color: var(--ink-faint); font-size: 11px; margin-left: 4px; }
+.bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; grid-column: 1 / 3; margin-top: -2px; }
+.bar > div { height: 100%; width: 0; background: var(--ink-dim); }
+.bar.fuel > div { background: var(--track); }
+.dsky { display: grid; grid-template-columns: auto auto 1fr; gap: 8px; align-items: center; padding: 8px 10px; background: #0b0f0b; border: 1px solid #1d2a1c; border-radius: 4px; }
+.lamp { font-family: var(--f-display); font-weight: 700; font-size: 11px; letter-spacing: 0.08em; padding: 3px 6px; border-radius: 2px; background: #1a1a16; color: #4a4a3e; text-align: center; }
+.lamp.on { background: var(--amber); color: #1a1200; box-shadow: 0 0 12px rgba(255,179,64,0.6); }
+.lamp.alarm.on { background: var(--alarm); color: #200800; box-shadow: 0 0 12px rgba(255,122,69,0.6); }
+.prog { font-family: var(--f-data); color: var(--dsky); font-size: 20px; text-shadow: 0 0 8px rgba(141,255,122,0.45); }
+.prog small { display: block; font-family: var(--f-display); font-size: 9px; letter-spacing: 0.14em; color: #4f8a46; text-shadow: none; }
+.code { font-family: var(--f-data); color: var(--amber); font-size: 15px; text-align: right; min-height: 1.2em; }
+.bingo { font-family: var(--f-data); font-size: 13px; color: var(--amber); text-align: center; padding: 5px; border: 1px solid rgba(255,179,64,0.35); border-radius: 3px; }
+#chart { width: 100%; height: 120px; display: block; }
+
+/* rádió */
+.radio { grid-column: 3; grid-row: 2; align-self: end; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; max-height: min(52vh, 100%); overflow: hidden; }
+.radio .lines { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 9px; overflow: hidden; justify-content: flex-end; }
+.line { display: grid; grid-template-columns: 54px 1fr; gap: 2px 8px; opacity: 0.55; transition: opacity 0.4s; }
+.line.now { opacity: 1; }
+.line .who { font-family: var(--f-display); font-weight: 700; font-size: 12px; letter-spacing: 0.08em; padding-top: 1px; }
+.line .who.CDR { color: #a9d4ff; } .line .who.LMP { color: #ffd59a; } .line .who.CC { color: #b7f0b0; } .line .who.CMP { color: #d9c2ff; }
+.line .who em { display: block; font-style: normal; font-family: var(--f-data); font-weight: 400; font-size: 10px; color: var(--ink-faint); letter-spacing: 0; }
+.line .en { font-size: 13.5px; line-height: 1.3; }
+.line .hu { grid-column: 2; font-size: 12px; line-height: 1.3; color: var(--ink-dim); }
+.line.ic .en::before { content: 'fedélzeti · '; font-family: var(--f-display); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); }
+
+/* idővonal */
+.timeline { grid-column: 1 / 4; grid-row: 3; padding: 10px 14px 10px; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: center; }
+.ctrl { display: flex; gap: 6px; align-items: center; }
+.play { width: 42px; height: 34px; border-radius: 4px; border: 1px solid var(--ink); background: var(--ink); color: var(--void); cursor: pointer; display: grid; place-items: center; }
+.play svg { width: 16px; height: 16px; fill: currentColor; }
+select { background: var(--glass); color: var(--ink); border: 1px solid var(--glass-edge); border-radius: 4px; padding: 6px; font-family: var(--f-data); font-size: 12px; }
+.track { position: relative; height: 34px; }
+.track input { position: absolute; left: 0; right: 0; top: 12px; width: 100%; margin: 0; accent-color: var(--track); cursor: pointer; }
+.marks { position: absolute; inset: 0; pointer-events: none; }
+.mk { position: absolute; top: 0; transform: translateX(-50%); font-family: var(--f-display); font-weight: 600; font-size: 10.5px; letter-spacing: 0.05em; color: var(--ink-dim); white-space: nowrap; pointer-events: auto; cursor: pointer; background: none; border: 0; padding: 0 2px; }
+.mk::after { content: ''; display: block; width: 1px; height: 7px; margin: 1px auto 0; background: currentColor; }
+.mk.minor { font-size: 0; width: 6px; color: var(--ink-faint); }
+.mk.alarm { color: var(--alarm); }
+.mk:hover { color: var(--ink); }
+.tinfo { grid-column: 1 / -1; font-family: var(--f-data); font-size: 12px; color: var(--ink-dim); text-align: left; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* indító fedőréteg és info */
+.start { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(ellipse at center, rgba(5,6,7,0.55), rgba(5,6,7,0.85)); z-index: 5; }
+.start .card { max-width: 520px; margin: 0 16px; text-align: center; display: grid; gap: 14px; justify-items: center; }
+.start h2 { margin: 0; font-family: var(--f-display); font-size: 40px; font-weight: 700; line-height: 1; text-wrap: balance; }
+.start p { margin: 0; color: var(--ink-dim); line-height: 1.5; max-width: 46ch; }
+.start .go { font-family: var(--f-display); font-weight: 700; font-size: 18px; letter-spacing: 0.08em; padding: 12px 26px; border-radius: 4px; border: 0; background: var(--ink); color: var(--void); cursor: pointer; }
+.start .alt { background: none; border: 1px solid var(--glass-edge); color: var(--ink); font-size: 14px; padding: 8px 16px; }
+.modal { position: fixed; inset: 0; z-index: 6; display: grid; place-items: center; background: rgba(0,0,0,0.6); }
+.modal .box { max-width: 640px; max-height: 82vh; overflow: auto; margin: 0 16px; padding: 22px 24px; background: #0d0f11; border: 1px solid var(--glass-edge); border-radius: 6px; line-height: 1.55; }
+.modal h3 { margin: 0 0 8px; font-family: var(--f-display); font-size: 24px; }
+.modal h4 { margin: 16px 0 4px; font-family: var(--f-display); font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-dim); }
+.modal p, .modal li { color: #cfccc4; max-width: 65ch; }
+.modal a { color: var(--track); }
+.modal ul { padding-left: 18px; margin: 4px 0; }
+.err { position: fixed; inset: auto 16px 50% 16px; text-align: center; color: var(--amber); font-family: var(--f-data); }
+
+@media (max-width: 900px) {
+  .hud { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto 1fr auto auto; gap: 8px; }
+  .head { grid-column: 1 / 3; }
+  .head h1 { font-size: 22px; }
+  .clock b { font-size: 17px; }
+  .views { grid-column: 1 / 3; grid-row: 2; justify-self: start; justify-content: flex-start; }
+  .views button { padding: 5px 8px; font-size: 12px; }
+  .tele { grid-column: 1 / 3; grid-row: 3; padding: 8px 10px; gap: 6px; }
+  .tele .rows { grid-template-columns: repeat(2, auto 1fr); gap: 3px 8px; }
+  .tele .rows .v { font-size: 12px; }
+  .tele .rows .k { font-size: 11.5px; }
+  .tele .rows .v i { display: none; }
+  .tele .bar, #chart, .tele .hide-sm { display: none; }
+  .dsky { padding: 5px 8px; }
+  .radio { grid-column: 1 / 3; grid-row: 4; max-height: 22vh; padding: 8px 10px; }
+  .radio .label { display: none; }
+  .line:not(.now) { display: none; }
+  .timeline { grid-column: 1 / 3; grid-row: 5; grid-template-columns: 1fr; gap: 6px; padding: 8px 10px; }
+  .tinfo { text-align: left; white-space: normal; }
+  .mk:not(.minor) { font-size: 0; width: 6px; }
+}
+@media (max-height: 760px) and (min-width: 901px) { #chart, .tele .hide-sm { display: none; } }
+@media (prefers-reduced-motion: reduce) { .line { transition: none; } }
+</style>
+</head>
+<body>
+<canvas id="scene" aria-label="Az Apollo 11 holdkomp 3D-s leszállási animációja"></canvas>
+
+<div class="hud">
+  <header class="head">
+    <h1>Apollo 11 · Eagle<small>Motoros leereszkedés · Nyugalom tengere · 1969. július 20.</small></h1>
+    <div class="clocks">
+      <div class="clock"><b id="get">102:32:00</b><span class="label">GET – küldetésidő</span></div>
+      <div class="clock"><b id="utc">20:04:00</b><span class="label">UTC</span></div>
+      <div class="clock"><b id="ttl">−13:40</b><span class="label">Talajérintésig</span></div>
+    </div>
+    <div class="phase" id="phase">Szabad repülés a PDI előtt</div>
+  </header>
+
+  <nav class="views" aria-label="Kameranézet">
+    <button data-view="chase" aria-pressed="true" title="1">Követő</button>
+    <button data-view="window" aria-pressed="false" title="2">Armstrong ablaka</button>
+    <button data-view="side" aria-pressed="false" title="3">Profil</button>
+    <button data-view="surface" aria-pressed="false" title="4">Felszínről</button>
+    <button id="helpers" aria-pressed="true" title="Pályavonal és célpont">Pálya</button>
+    <button id="infoBtn" aria-pressed="false">Adatok</button>
+  </nav>
+
+  <section class="panel tele" aria-label="Telemetria">
+    <div class="rows">
+      <span class="k">Magasság</span><span class="v" id="alt">–</span>
+      <span class="k">Függőleges</span><span class="v" id="hdot">–</span>
+      <span class="k">Vízszintes</span><span class="v" id="vh">–</span>
+      <span class="k">Hátralévő táv</span><span class="v" id="rng">–</span>
+      <span class="k">Tolóerő</span><span class="v" id="thr">–</span>
+      <div class="bar"><div id="thrBar"></div></div>
+      <span class="k">Dőlésszög</span><span class="v" id="pitch">–</span>
+      <span class="k">Tömeg</span><span class="v" id="mass">–</span>
+      <span class="k">Hajtóanyag</span><span class="v" id="prop">–</span>
+      <div class="bar fuel"><div id="propBar"></div></div>
+    </div>
+    <div class="dsky" aria-label="DSKY kijelző">
+      <div class="prog"><small>PROG</small><span id="prog">63</span></div>
+      <div style="display:grid;gap:4px">
+        <span class="lamp alarm" id="lampProg">PROG</span>
+        <span class="lamp" id="lampLow">LOW LVL</span>
+      </div>
+      <div class="code" id="code"></div>
+    </div>
+    <div class="bingo" id="bingo" hidden></div>
+    <div class="hide-sm">
+      <div class="label" style="margin-bottom:4px">Magasságprofil (log skála)</div>
+      <canvas id="chart"></canvas>
+    </div>
+  </section>
+
+  <section class="panel radio" aria-label="Rádióforgalom" aria-live="polite">
+    <div class="label">Rádióforgalom · eredeti NASA-átirat</div>
+    <div class="lines" id="lines"></div>
+  </section>
+
+  <section class="panel timeline" aria-label="Idővonal">
+    <div class="ctrl">
+      <button class="play" id="play" aria-label="Lejátszás"><svg viewBox="0 0 16 16" id="playIcon"><path d="M3 1.5v13l11-6.5z"/></svg></button>
+      <button class="tbtn" id="back" aria-label="Vissza 10 másodpercet">−10 s</button>
+      <button class="tbtn" id="fwd" aria-label="Előre 10 másodpercet">+10 s</button>
+      <select id="sound" aria-label="Eredeti hang" title="Eredeti hang: rádió = a NASA közvetítése, amit a világ hallott; irányítóterem = CAPCOM-konzol + Gene Kranz repülésirányítói hurka. 1× és 2× sebességnél szól." hidden></select>
+      <select id="speed" aria-label="Lejátszási sebesség">
+        <option value="1" selected>1× valós</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option><option value="30">30×</option>
+      </select>
+    </div>
+    <div class="track">
+      <div class="marks" id="marks"></div>
+      <input type="range" id="scrub" min="0" max="900" step="0.1" value="0" aria-label="Küldetésidő">
+    </div>
+    <div class="tinfo" id="tinfo">–</div>
+  </section>
+</div>
+
+<div class="start" id="start">
+  <div class="card">
+    <div class="label">GET 102:32:00 → 102:47:00 · 15 perc valós időben</div>
+    <div class="label" id="demstat" style="color:var(--track)">Valós domborzat betöltése…</div>
+    <h2>Az Eagle leszállása a Holdra</h2>
+    <p>A pálya a NASA eredeti adataiból készült: a Mission Report eseménysora, a DSKY-ról felolvasott magasság- és sebességértékek, valamint a rádióforgalom pontos időbélyegekkel.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+      <button class="go" id="goStart">Indítás 102:32:00-tól</button>
+      <button class="go alt" id="goFinal">Csak az utolsó 4 perc</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="info" hidden>
+  <div class="box" role="dialog" aria-labelledby="infoTitle">
+    <h3 id="infoTitle">Adatok és módszer</h3>
+    <p>A lejátszás 1:1 időarányú: a 102:33:05-ös gyújtástól a 102:45:39,9-es kontaktfényig 12 perc 35 másodperc telik el, ahogy 1969-ben.</p>
+    <h4>Mi valós</h4>
+    <ul>
+      <li>Eseményidők a Mission Report (MSC-00171) 5-I. táblázatából: PDI, teljes tolóerő, fordulás, radar, riasztások (1202, 1201), tolóerő-visszavétel, P64, P66, alacsony üzemanyagszint, talajérintés.</li>
+      <li>Magasság, süllyedési és előre haladási sebesség: Aldrin és Armstrong bemondásai (TEC-átirat, fedélzeti hangszalag), a PDI és a „high gate” állapota (MR), a fékezési szakaszra a tervezett pálya (Bennett, NASA TM X-58040).</li>
+      <li>Dőlésszög-profil, tömeg (MR B-I), hajtóanyag (MR 9-XIII: PDI-n ~17 900 lb, leállításkor 770 lb).</li>
+      <li>Leszállóhely (LROC: 0,67416° É, 23,47314° K), Nap 10,65° magasan keletről, Föld 59° magasan nyugaton.</li>
+      <li>Domborzat: a pálya mentén az LRO SLDEM2015 (LOLA lézeres magasságmérés + Kaguya sztereó, 474 m és 118 m felbontás), a leszállóhely ±2 km-es körzetében az LROC NAC DTM 2 m-es felméréssel; benne van a valódi West- és Little West-kráter. A vetett árnyékok a valós napállásra előre számoltak. A 3D keret a valós nyomvonal irányába (88,6°) áll.</li>
+      <li>Rádióforgalom szó szerint a NASA közkincs TEC-átiratából; a „fedélzeti” sorok a nem sugárzott belső hangszalagról valók (ALSJ időpontok).</li>
+      <li>Eredeti hang: a NASA közszolgálati felvétele (amit a világ hallott), illetve az irányítóterem szalagja (CAPCOM-konzol és Gene Kranz repülésirányítói hurka). A közszolgálati felvételt keresztkorrelációval igazítottam az időbélyeges irányítótermi szalaghoz, a két sáv ±0,03 s-on belül egyezik.</li>
+    </ul>
+    <h4>Hogyan áll össze a pálya</h4>
+    <p>A mérési pontokra súlyozott simító spline illeszkedik (a böngésződben számolódik). Ebből jön a gyorsulás, a szükséges tolóerő és a fogyasztás. Ellenőrzésként: az így kapott fogyasztás 2,4%-on belül egyezik a tényleges értékkel, és a kinematikából visszaszámolt dőlésszög követi a jelentésben szereplőt.</p>
+    <h4>Mi közelítés</h4>
+    <ul>
+      <li>A domborzati adatok felbontása alatti apró krátereket és a felszín világosságát (albedó) a program generálja. A sziklák elhelyezése a West-kráter körül szemléltető.</li>
+      <li>Az oldalirányú eltérést (kb. 120 m balra) és a kis oldalsodródást a modell nem követi; a pálya egyenesen nyugat felé tart.</li>
+      <li>A bemondások kerekítettek, az átirat időbélyegei pár másodpercet tévedhetnek. A fékezési szakasz köztes értékei ±5–10%.</li>
+      <li>Az üzemanyag-kijelzés tömegalapú; a legénység műszere a lötyögés miatt kicsit kevesebbet mutatott („Five percent”).</li>
+    </ul>
+    <h4>Források</h4>
+    <ul>
+      <li><a href="https://apollojournals.org/alsj/a11/a11.landing.html" target="_blank" rel="noopener">Apollo Lunar Surface Journal – The First Lunar Landing</a></li>
+      <li><a href="https://apollojournals.org/alsj/a11/AS11_TEC.PDF" target="_blank" rel="noopener">Technical Air-to-Ground Voice Transcription (TEC)</a></li>
+      <li><a href="https://apollojournals.org/alsj/a11/a11MIssionReport_1971015566.pdf" target="_blank" rel="noopener">Apollo 11 Mission Report MSC-00171</a></li>
+      <li><a href="https://ntrs.nasa.gov/api/citations/19700024568/downloads/19700024568.pdf" target="_blank" rel="noopener">Bennett: Apollo Lunar Descent and Ascent Trajectories (TM X-58040)</a></li>
+      <li><a href="https://lroc.im-ldi.com/featured_sites/view_site/51" target="_blank" rel="noopener">LROC – Apollo 11 leszállóhely</a></li>
+      <li><a href="https://pds-geosciences.wustl.edu/missions/lro/lola.htm" target="_blank" rel="noopener">LOLA / SLDEM2015 (NASA PDS Geosciences)</a></li>
+      <li><a href="https://wms.lroc.asu.edu/lroc/view_rdr/NAC_DTM_APOLLO11" target="_blank" rel="noopener">LROC NAC DTM – Apollo 11</a></li>
+      <li><a href="https://apolloinrealtime.org/11/" target="_blank" rel="noopener">Apollo 11 in Real Time – irányítótermi hangszalagok</a> (Ben Feist és munkatársai)</li>
+    </ul>
+    <p style="margin-top:16px"><button class="tbtn" id="infoClose">Bezárás</button></p>
+  </div>
+</div>
+<div class="err" id="err" hidden></div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>
