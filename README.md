@@ -4,6 +4,8 @@ Az Apollo 11 holdkomp motoros leereszkedése és leszállása WebGL-ben (three.j
 
 *English: a real-time (1:1) WebGL replay of the Apollo 11 powered descent, driven by NASA telemetry, the original air-to-ground and Mission Control audio, and LRO lunar terrain data (SLDEM2015 + LROC NAC DTM).*
 
+**Élő változat / live:** https://gaberun24.github.io/apollo11-landing/
+
 ## Funkciók
 
 - **Pálya a valós adatokból.** Felhasznált források:
