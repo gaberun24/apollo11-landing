@@ -247,6 +247,7 @@ export function createTerrain(namedCraters) {
     uLMOn: { value: 0 },
     uDust: { value: new THREE.Vector4(0, 0, 0, 0) },
     uTime: { value: 0 },
+    tAlb: { value: dummyTex() }, uAlbG: { value: new THREE.Vector4(0, -1, 0, 1) }, uAlbN: { value: new THREE.Vector2(1, 1) }, uAlbK: { value: 1 }, uAlbOn: { value: 0 },
     uDemOn: { value: 0 }, uFrame: { value: new THREE.Matrix3() }, uSinA: { value: 1 }, uCosA: { value: 0 },
     tReg: { value: dummyTex() }, tCor: { value: dummyTex() }, tNac: { value: dummyTex() },
     uRegG: { value: new THREE.Vector4(0, -1, 0, 1) }, uCorG: { value: new THREE.Vector4(0, -1, 0, 1) }, uNacG: { value: new THREE.Vector4(0, -1, 0, 1) },
@@ -326,7 +327,14 @@ export function createTerrain(namedCraters) {
       float alpha = acos(cosA);
       float opp = 1.0 + 0.9*exp(-alpha*9.0) + 0.25*exp(-alpha*2.0);
       vec3 an = vnoise(p/350.0, 11u); vec3 bn = vnoise(p/37.0, 23u);
-      float alb = 0.12*(1.0 + 0.12*an.x + 0.07*bn.x*clamp(2.0/foot - 0.5, 0.0, 1.0));
+      float albRel = 1.0, aVar = 0.12;
+      if (uAlbOn > 0.5){ // valós albedó (LROC WAC), a leszállóhely mare-felszínéhez viszonyítva
+        vec2 ll = latlon(p);
+        vec2 rc = vec2((ll.x - uAlbG.x)/uAlbG.y, (ll.y - uAlbG.z)/uAlbG.w);
+        albRel = pow(texture(tAlb, (rc.yx + 0.5)/uAlbN.yx).r*uAlbK, 0.85);
+        aVar = 0.05;
+      }
+      float alb = 0.12*albRel*(1.0 + aVar*an.x + 0.07*bn.x*clamp(2.0/foot - 0.5, 0.0, 1.0));
       vec3 tint = vec3(0.95, 0.91, 0.85);
       vec3 col = tint*alb*(uSunI*brdf*opp + 0.035);
       if (uDust.z > 0.0){
@@ -415,5 +423,14 @@ export function createTerrain(namedCraters) {
     U.uDemOn.value = 1;
     demSampler = sampler;
   }
-  return { mesh, material, uniforms, update, enableDEM, stats: () => n };
+  /** Valós albedó (WAC): tex = szürke PNG, m = meta.alb. */
+  function enableAlbedo(tex, m) {
+    const D2R = Math.PI / 180, U = uniforms;
+    U.tAlb.value = tex;
+    U.uAlbG.value.set(m.lat0 * D2R, m.dlat * D2R, m.lon0 * D2R, m.dlon * D2R);
+    U.uAlbN.value.set(m.rows, m.cols);
+    U.uAlbK.value = 255 * m.scale / m.siteRef;
+    U.uAlbOn.value = 1;
+  }
+  return { mesh, material, uniforms, update, enableDEM, enableAlbedo, stats: () => n };
 }

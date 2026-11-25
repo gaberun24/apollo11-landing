@@ -23,6 +23,7 @@ uniform float uSinA, uCosA;
 uniform sampler2D tReg, tCor, tNac;
 uniform vec4 uRegG, uCorG, uNacG;   // lat0, dlat, lon0, dlon (radián)
 uniform vec2 uRegN, uCorN, uNacN;   // sorok, oszlopok
+uniform sampler2D tAlb; uniform vec4 uAlbG; uniform vec2 uAlbN; uniform float uAlbK, uAlbOn; // WAC albedó
 vec2 latlon(vec2 p){
   vec2 q = p / uR;
   vec3 v = uFrame * vec3(q.x, sqrt(max(1.0 - dot(q, q), 0.0)), q.y);

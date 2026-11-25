@@ -24,7 +24,9 @@ Az Apollo 11 holdkomp motoros leereszkedése és leszállása WebGL-ben (three.j
 - **Valós domborzat:**
   - SLDEM2015 (LOLA + Kaguya) a pálya mentén, ~474 m és ~118 m felbontással;
   - LROC NAC DTM 2 m-es felbontással a leszállóhely ±2 km-es körzetében, a valódi West- és Little West-kráterrel;
-  - a vetett árnyékok előre számoltak a valós napállásra (10,65°).
+  - a vetett árnyékok előre számoltak a valós napállásra (10,65°);
+  - a felszín világossága az LROC WAC árnyékmentes albedótérképéből jön (643 nm, ~400 m), a leszállóhely mare-felszínéhez viszonyítva;
+  - az expozíció a helyi napmagassághoz igazodik, így a felföldek nem égnek ki.
 - **Négy kameranézet:** követő, Armstrong ablaka, profil, felszínről.
 - **Világhoz rögzített LOD-terep (CDLOD).** Kamera körüli csúszó rács helyett világhoz rögzített foltok, így a terep nem „úszik” mozgás közben.
 
@@ -64,6 +66,7 @@ Billentyűk:
 - `tools/fetch_dem.py <cél> nac|s256|s128|wac`: csak a szükséges sorszeleteket tölti le HTTP Range kérésekkel a NASA PDS-ről.
 - `tools/proc_dem.py <forrás> <dem-mappa>`: magasságok a leszállóhelyhez viszonyítva, vetett árnyékok, a máig ott álló leszállási fokozat púpjának kisimítása, tömörítés.
 - `tools/bin2png.py <dem-mappa>`: a tömörített adatfolyam PNG-be csomagolása.
+- `tools/fetch_wac.py <cél> block` és `tools/proc_wac.py <forrás> <dem-mappa>`: a WAC-albedó letöltése néhány nagy Range kéréssel (a PDS szerver a sok kis kérést egy órára letiltja), majd 8 bites PNG-be alakítása.
 - `tools/xcorr.py`: a hangsávok keresztkorrelációs igazítása.
 
 ## Források
@@ -76,12 +79,13 @@ Billentyűk:
 - **Domborzat:**
   - SLDEM2015 (LRO LOLA + SELENE Kaguya TC), [NASA PDS Geosciences Node](https://pds-geosciences.wustl.edu/missions/lro/lola.htm);
   - LROC NAC DTM Apollo 11 (NASA/GSFC/Arizona State University), [NASA PDS](https://wms.lroc.asu.edu/lroc/view_rdr/NAC_DTM_APOLLO11).
+- **Albedó:** LROC WAC Hapke-normált reflektancia, 643 nm, 76 ppd (NASA/GSFC/Arizona State University), NASA PDS (`WAC_HAPKE_643NM_E350N0450`, `…E350S0450`).
 - **Leszállóhely koordinátái:** LROC (0,67416° É, 23,47314° K).
 - **3D motor:** [three.js](https://threejs.org) 0.160 (MIT), CDN-ről.
 
 ## Ismert közelítések
 
-- A felszín világosságát (albedó) a program generálja. A valós WAC-albedótérkép letöltését a NASA szervere ideiglenesen korlátozta.
+- Az albedó ~400 m-es felbontású; az ennél finomabb világosságváltozás generált.
 - A domborzati adatok felbontása alatti apró kráterek és a sziklák elhelyezése szemléltető.
 - A pálya az oldalirányú eltérést (~120 m) nem követi.
 - Az átirat időbélyegei pár másodpercet tévedhetnek.

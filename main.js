@@ -85,6 +85,11 @@ const demStat = (t) => { const e = $('demstat'); if (e) e.textContent = t; };
     boulders = createBoulders([west]); worldGroup.add(boulders);
     SURF_CAM.y = heightAt(SURF_CAM.x, SURF_CAM.z, 0.5) + 1.7;
     demStat('Valós domborzat: LRO SLDEM2015 + LROC NAC DTM (2 m)');
+    if (meta.alb) new THREE.TextureLoader().load(meta.alb.file, (t) => {
+      t.flipY = false; t.colorSpace = THREE.NoColorSpace; t.needsUpdate = true;
+      terrain.enableAlbedo(t, meta.alb);
+      demStat('Valós domborzat és albedó: LRO SLDEM2015 + NAC DTM (2 m) + WAC');
+    });
   } catch (err) {
     console.warn('DEM', err);
     demStat('A valós domborzat nem tölthető be – generált felszín');
@@ -138,7 +143,7 @@ function placeCamera(st) {
 
 // ---------------- jelenet frissítése ----------------
 const qLM = new THREE.Quaternion();
-let dustLevel = 0, lastGet = S.get;
+let dustLevel = 0, lastGet = S.get, lastExpoGet = 0;
 function updateScene(st, dtReal) {
   const r = R_MOON + st.alt;
   lmWorld.set(r * Math.sin(st.phi), r * Math.cos(st.phi) - R_MOON, 0);
@@ -167,6 +172,11 @@ function updateScene(st, dtReal) {
   pathLine.material.uniforms.uNow.value = st.get;
   marker.visible = st.alt > 120;
 
+  // expozíció-kompenzáció: a helyi napmagassághoz igazítva (a leszállóhelyen 10,65°), mint egy fényképezőgépnél
+  { const sinE = Math.max(SUN.x * Math.sin(ph) + SUN.y * Math.cos(ph), 0.05);
+    const target = 2.0 * THREE.MathUtils.clamp(Math.pow(Math.sin(THREE.MathUtils.degToRad(D.SUN.alt)) / sinE, 0.8), 0.4, 1.2);
+    renderer.toneMappingExposure += (target - renderer.toneMappingExposure) * Math.min(1, Math.abs(st.get - lastExpoGet) > 5 ? 1 : dtReal * 0.5);
+    lastExpoGet = st.get; }
   placeCamera(st);
   sky.position.copy(camera.position);
   tag.position.copy(lm.position).y += 3;
